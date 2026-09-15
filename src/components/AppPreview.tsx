@@ -4,9 +4,10 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Battery,
+  BatteryCharging,
   Bell,
   BedDouble,
-  Camera,
+  Clock,
   Lightbulb,
   ShieldAlert,
   ShieldCheck,
@@ -17,8 +18,6 @@ import {
   Zap,
 } from "lucide-react";
 import { EASE } from "@/lib/motion";
-
-const feeds = ["Front Gate", "Shop Floor", "Back Door", "Parking"];
 
 const rooms = [
   { room: "Living Room", Icon: Sofa, defaultOn: true },
@@ -33,28 +32,28 @@ type SolarMode = (typeof solarModes)[number];
 const zones = ["Perimeter Sensors", "Motion Detectors", "Smoke Detectors"];
 
 const tabs = [
-  { key: "cameras", label: "Cameras", Icon: Camera },
   { key: "automation", label: "Automation", Icon: Lightbulb },
   { key: "solar", label: "Solar", Icon: Sun },
+  { key: "ev", label: "EV Charger", Icon: BatteryCharging },
   { key: "alarm", label: "Alarm", Icon: ShieldCheck },
 ] as const;
 
 type TabKey = (typeof tabs)[number]["key"];
 
 const panelMeta: Record<TabKey, { title: string; HeaderIcon: typeof ShieldCheck }> = {
-  cameras: { title: "Live Monitoring", HeaderIcon: ShieldCheck },
   automation: { title: "Automation Scenes", HeaderIcon: Lightbulb },
   solar: { title: "Solar Dashboard", HeaderIcon: Sun },
+  ev: { title: "EV Charger", HeaderIcon: BatteryCharging },
   alarm: { title: "Fire & Security Alarm", HeaderIcon: ShieldAlert },
 };
 
 export default function AppPreview() {
-  const [tab, setTab] = useState<TabKey>("cameras");
-  const [focusedFeed, setFocusedFeed] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabKey>("automation");
   const [lights, setLights] = useState(() =>
     Object.fromEntries(rooms.map((r) => [r.room, r.defaultOn]))
   );
   const [solarMode, setSolarMode] = useState<SolarMode>("Hybrid");
+  const [charging, setCharging] = useState(true);
   const [armed, setArmed] = useState(true);
 
   const lightsOnCount = Object.values(lights).filter(Boolean).length;
@@ -62,12 +61,14 @@ export default function AppPreview() {
 
   const meta = panelMeta[tab];
   const subtitle =
-    tab === "cameras"
-      ? "4 devices online"
-      : tab === "automation"
-        ? `${lightsOnCount} of ${rooms.length} lights on`
-        : tab === "solar"
-          ? `${solarMode} mode`
+    tab === "automation"
+      ? `${lightsOnCount} of ${rooms.length} lights on`
+      : tab === "solar"
+        ? `${solarMode} mode`
+        : tab === "ev"
+          ? charging
+            ? "Charging"
+            : "Paused"
           : armed
             ? "3 zones armed"
             : "System disarmed";
@@ -136,52 +137,6 @@ export default function AppPreview() {
 
         <div className="mt-4 min-h-[172px]">
           <AnimatePresence mode="wait">
-            {tab === "cameras" && (
-              <motion.div
-                key="cameras"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25, ease: EASE }}
-                className="grid grid-cols-2 gap-2.5"
-              >
-                {feeds.map((label, i) => {
-                  const isFocused = focusedFeed === label;
-                  return (
-                    <motion.button
-                      key={label}
-                      type="button"
-                      onClick={() => setFocusedFeed(isFocused ? null : label)}
-                      whileTap={{ scale: 0.96 }}
-                      animate={{ scale: isFocused ? 1.04 : 1 }}
-                      transition={{ duration: 0.25, ease: "easeOut" }}
-                      className={`relative aspect-video overflow-hidden rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 text-left outline-none ${
-                        isFocused ? "ring-2 ring-blue-400 ring-offset-2 ring-offset-surface" : ""
-                      }`}
-                    >
-                      <motion.div
-                        className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-blue-300/25 to-transparent"
-                        animate={{ x: ["-120%", "220%"] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "linear", delay: i * 0.4 }}
-                      />
-                      <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-black/40 px-1.5 py-0.5 text-[8px] font-medium text-white">
-                        <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" /> LIVE
-                      </span>
-                      <Camera size={18} className="absolute inset-0 m-auto text-white/20" />
-                      <span className="absolute bottom-1.5 left-1.5 text-[9px] font-medium text-white/80">
-                        {label}
-                      </span>
-                      {isFocused && (
-                        <span className="absolute right-1.5 top-1.5 rounded-full bg-blue-500 px-1.5 py-0.5 text-[8px] font-medium text-white">
-                          Now
-                        </span>
-                      )}
-                    </motion.button>
-                  );
-                })}
-              </motion.div>
-            )}
-
             {tab === "automation" && (
               <motion.div
                 key="automation"
@@ -286,6 +241,55 @@ export default function AppPreview() {
                   <span className="text-[10px] font-medium text-emerald-500">
                     {solarMode === "Off-Grid" ? "Disabled" : "Active"}
                   </span>
+                </div>
+              </motion.div>
+            )}
+
+            {tab === "ev" && (
+              <motion.div
+                key="ev"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25, ease: EASE }}
+                className="rounded-xl border border-border bg-foreground/5 p-4"
+              >
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setCharging((v) => !v)}
+                    className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-white"
+                  >
+                    <BatteryCharging size={26} />
+                    {charging && (
+                      <motion.span
+                        className="absolute inset-0 rounded-full border-2 border-emerald-300"
+                        animate={{ scale: [1, 1.3, 1], opacity: [0.7, 0, 0.7] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                    )}
+                  </button>
+                  <div>
+                    <p className="text-sm font-semibold">{charging ? "Charging…" : "Charging paused"}</p>
+                    <p className="mt-0.5 text-[11px] text-muted">Tap to {charging ? "pause" : "resume"}</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex items-center justify-between rounded-lg bg-foreground/5 px-3 py-1.5">
+                    <span className="flex items-center gap-2 text-xs text-foreground/90">
+                      <Zap size={12} className="text-brand" /> Energy delivered
+                    </span>
+                    <span className="text-[10px] font-medium text-emerald-500">8.4 kWh</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-foreground/5 px-3 py-1.5">
+                    <span className="flex items-center gap-2 text-xs text-foreground/90">
+                      <Clock size={12} className="text-brand" /> Est. time to full
+                    </span>
+                    <span className="text-[10px] font-medium text-emerald-500">
+                      {charging ? "1h 20m" : "—"}
+                    </span>
+                  </div>
                 </div>
               </motion.div>
             )}
