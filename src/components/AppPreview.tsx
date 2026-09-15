@@ -34,7 +34,7 @@ const zones = ["Perimeter Sensors", "Motion Detectors", "Smoke Detectors"];
 const tabs = [
   { key: "automation", label: "Automation", Icon: Lightbulb },
   { key: "solar", label: "Solar", Icon: Sun },
-  { key: "ev", label: "EV Charger", Icon: BatteryCharging },
+  { key: "ev", label: "Charger", Icon: BatteryCharging },
   { key: "alarm", label: "Alarm", Icon: ShieldCheck },
 ] as const;
 
@@ -361,7 +361,7 @@ export default function AppPreview() {
                     transition={{ type: "spring", stiffness: 500, damping: 32 }}
                   />
                 )}
-                <span className="relative inline-flex items-center gap-1">
+                <span className="relative inline-flex items-center gap-1 whitespace-nowrap">
                   <t.Icon size={12} /> {t.label}
                 </span>
               </button>
